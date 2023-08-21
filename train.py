@@ -359,7 +359,7 @@ def test():
     print('--------------------------------')
     print('nll_test: {:.10f}'.format(np.mean(nll_test)),
           'kl_test: {:.10f}'.format(np.mean(kl_test)),
-          'mse_test: {:.10f}'.format(np.mean(mse_test)),
+          'mse_test: {:.10f}'.format(np.mean(mse_test)))
     print('MSE: {}'.format(mse_str))
     if args.save_folder:
         print('--------------------------------', file=log)
