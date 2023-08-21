@@ -190,7 +190,10 @@ def train(epoch, best_val_loss):
     encoder.train()
     decoder.train()
     scheduler.step()
-    for batch_idx, data in enumerate(train_loader):
+    for batch_idx, (data) in enumerate(train_loader):
+
+        # Data seems to be returned as a tuple, but only one thing in the tuple, so just take the first one
+        data = data[0]
 
         if args.cuda:
             data = data.cuda()
@@ -240,6 +243,9 @@ def train(epoch, best_val_loss):
     encoder.eval()
     decoder.eval()
     for batch_idx, data in enumerate(valid_loader):
+
+        data = data[0]
+
         if args.cuda:
             data = data.cuda()
         data = Variable(data, volatile=True)
@@ -298,6 +304,9 @@ def test():
     encoder.load_state_dict(torch.load(encoder_file))
     decoder.load_state_dict(torch.load(decoder_file))
     for batch_idx, data in enumerate(test_loader):
+
+        data = data[0]
+
         if args.cuda:
             data = data.cuda()
         data = Variable(data, volatile=True)
