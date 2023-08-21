@@ -118,15 +118,15 @@ def binary_accuracy(output, labels):
 def load_data(batch_size=1, suffix=''):
     loc_train = np.load('data/loc_train' + suffix + '.npy')
     vel_train = np.load('data/vel_train' + suffix + '.npy')
-    edges_train = np.load('data/edges_train' + suffix + '.npy')
+    # edges_train = np.load('data/edges_train' + suffix + '.npy')
 
     loc_valid = np.load('data/loc_valid' + suffix + '.npy')
     vel_valid = np.load('data/vel_valid' + suffix + '.npy')
-    edges_valid = np.load('data/edges_valid' + suffix + '.npy')
+    # edges_valid = np.load('data/edges_valid' + suffix + '.npy')
 
     loc_test = np.load('data/loc_test' + suffix + '.npy')
     vel_test = np.load('data/vel_test' + suffix + '.npy')
-    edges_test = np.load('data/edges_test' + suffix + '.npy')
+    # edges_test = np.load('data/edges_test' + suffix + '.npy')
 
     # [num_samples, num_timesteps, num_dims, num_atoms]
     num_atoms = loc_train.shape[3]
@@ -150,39 +150,39 @@ def load_data(batch_size=1, suffix=''):
     loc_train = np.transpose(loc_train, [0, 3, 1, 2])
     vel_train = np.transpose(vel_train, [0, 3, 1, 2])
     feat_train = np.concatenate([loc_train, vel_train], axis=3)
-    edges_train = np.reshape(edges_train, [-1, num_atoms ** 2])
-    edges_train = np.array((edges_train + 1) / 2, dtype=np.int64)
+    # edges_train = np.reshape(edges_train, [-1, num_atoms ** 2])
+    # edges_train = np.array((edges_train + 1) / 2, dtype=np.int64)
 
     loc_valid = np.transpose(loc_valid, [0, 3, 1, 2])
     vel_valid = np.transpose(vel_valid, [0, 3, 1, 2])
     feat_valid = np.concatenate([loc_valid, vel_valid], axis=3)
-    edges_valid = np.reshape(edges_valid, [-1, num_atoms ** 2])
-    edges_valid = np.array((edges_valid + 1) / 2, dtype=np.int64)
+    # edges_valid = np.reshape(edges_valid, [-1, num_atoms ** 2])
+    # edges_valid = np.array((edges_valid + 1) / 2, dtype=np.int64)
 
     loc_test = np.transpose(loc_test, [0, 3, 1, 2])
     vel_test = np.transpose(vel_test, [0, 3, 1, 2])
     feat_test = np.concatenate([loc_test, vel_test], axis=3)
-    edges_test = np.reshape(edges_test, [-1, num_atoms ** 2])
-    edges_test = np.array((edges_test + 1) / 2, dtype=np.int64)
+    # edges_test = np.reshape(edges_test, [-1, num_atoms ** 2])
+    # edges_test = np.array((edges_test + 1) / 2, dtype=np.int64)
 
     feat_train = torch.FloatTensor(feat_train)
-    edges_train = torch.LongTensor(edges_train)
+    # edges_train = torch.LongTensor(edges_train)
     feat_valid = torch.FloatTensor(feat_valid)
-    edges_valid = torch.LongTensor(edges_valid)
+    # edges_valid = torch.LongTensor(edges_valid)
     feat_test = torch.FloatTensor(feat_test)
-    edges_test = torch.LongTensor(edges_test)
+    # edges_test = torch.LongTensor(edges_test)
 
-    # Exclude self edges
-    off_diag_idx = np.ravel_multi_index(
-        np.where(np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)),
-        [num_atoms, num_atoms])
-    edges_train = edges_train[:, off_diag_idx]
-    edges_valid = edges_valid[:, off_diag_idx]
-    edges_test = edges_test[:, off_diag_idx]
+    # # Exclude self edges
+    # off_diag_idx = np.ravel_multi_index(
+    #     np.where(np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)),
+    #     [num_atoms, num_atoms])
+    # edges_train = edges_train[:, off_diag_idx]
+    # edges_valid = edges_valid[:, off_diag_idx]
+    # edges_test = edges_test[:, off_diag_idx]
 
-    train_data = TensorDataset(feat_train, edges_train)
-    valid_data = TensorDataset(feat_valid, edges_valid)
-    test_data = TensorDataset(feat_test, edges_test)
+    train_data = TensorDataset(feat_train)
+    valid_data = TensorDataset(feat_valid)
+    test_data = TensorDataset(feat_test)
 
     train_data_loader = DataLoader(train_data, batch_size=batch_size)
     valid_data_loader = DataLoader(valid_data, batch_size=batch_size)
@@ -191,144 +191,6 @@ def load_data(batch_size=1, suffix=''):
     return train_data_loader, valid_data_loader, test_data_loader, loc_max, loc_min, vel_max, vel_min
 
 
-def load_kuramoto_data(batch_size=1, suffix=''):
-    feat_train = np.load('data/feat_train' + suffix + '.npy')
-    edges_train = np.load('data/edges_train' + suffix + '.npy')
-    feat_valid = np.load('data/feat_valid' + suffix + '.npy')
-    edges_valid = np.load('data/edges_valid' + suffix + '.npy')
-    feat_test = np.load('data/feat_test' + suffix + '.npy')
-    edges_test = np.load('data/edges_test' + suffix + '.npy')
-
-    # [num_sims, num_atoms, num_timesteps, num_dims]
-    num_atoms = feat_train.shape[1]
-
-    # Normalize each feature dim. individually
-    feat_max = feat_train.max(0).max(0).max(0)
-    feat_min = feat_train.min(0).min(0).min(0)
-
-    feat_max = np.expand_dims(np.expand_dims(np.expand_dims(feat_max, 0), 0), 0)
-    feat_min = np.expand_dims(np.expand_dims(np.expand_dims(feat_min, 0), 0), 0)
-
-    # Normalize to [-1, 1]
-    feat_train = (feat_train - feat_min) * 2 / (feat_max - feat_min) - 1
-    feat_valid = (feat_valid - feat_min) * 2 / (feat_max - feat_min) - 1
-    feat_test = (feat_test - feat_min) * 2 / (feat_max - feat_min) - 1
-
-    # Reshape to: [num_sims, num_atoms, num_timesteps, num_dims]
-    edges_train = np.reshape(edges_train, [-1, num_atoms ** 2])
-    edges_valid = np.reshape(edges_valid, [-1, num_atoms ** 2])
-    edges_test = np.reshape(edges_test, [-1, num_atoms ** 2])
-
-    feat_train = torch.FloatTensor(feat_train)
-    edges_train = torch.LongTensor(edges_train)
-    feat_valid = torch.FloatTensor(feat_valid)
-    edges_valid = torch.LongTensor(edges_valid)
-    feat_test = torch.FloatTensor(feat_test)
-    edges_test = torch.LongTensor(edges_test)
-
-    # Exclude self edges
-    off_diag_idx = np.ravel_multi_index(
-        np.where(np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)),
-        [num_atoms, num_atoms])
-    edges_train = edges_train[:, off_diag_idx]
-    edges_valid = edges_valid[:, off_diag_idx]
-    edges_test = edges_test[:, off_diag_idx]
-
-    train_data = TensorDataset(feat_train, edges_train)
-    valid_data = TensorDataset(feat_valid, edges_valid)
-    test_data = TensorDataset(feat_test, edges_test)
-
-    train_data_loader = DataLoader(train_data, batch_size=batch_size)
-    valid_data_loader = DataLoader(valid_data, batch_size=batch_size)
-    test_data_loader = DataLoader(test_data, batch_size=batch_size)
-
-    return train_data_loader, valid_data_loader, test_data_loader
-
-
-def load_kuramoto_data_old(batch_size=1, suffix=''):
-    feat_train = np.load('data/old_kuramoto/feat_train' + suffix + '.npy')
-    edges_train = np.load('data/old_kuramoto/edges_train' + suffix + '.npy')
-    feat_valid = np.load('data/old_kuramoto/feat_valid' + suffix + '.npy')
-    edges_valid = np.load('data/old_kuramoto/edges_valid' + suffix + '.npy')
-    feat_test = np.load('data/old_kuramoto/feat_test' + suffix + '.npy')
-    edges_test = np.load('data/old_kuramoto/edges_test' + suffix + '.npy')
-
-    # [num_sims, num_atoms, num_timesteps, num_dims]
-    num_atoms = feat_train.shape[1]
-
-    # Reshape to: [num_sims, num_atoms, num_timesteps, num_dims]
-    edges_train = np.reshape(edges_train, [-1, num_atoms ** 2])
-    edges_valid = np.reshape(edges_valid, [-1, num_atoms ** 2])
-    edges_test = np.reshape(edges_test, [-1, num_atoms ** 2])
-
-    feat_train = torch.FloatTensor(feat_train)
-    edges_train = torch.LongTensor(edges_train)
-    feat_valid = torch.FloatTensor(feat_valid)
-    edges_valid = torch.LongTensor(edges_valid)
-    feat_test = torch.FloatTensor(feat_test)
-    edges_test = torch.LongTensor(edges_test)
-
-    # Exclude self edges
-    off_diag_idx = np.ravel_multi_index(
-        np.where(np.ones((num_atoms, num_atoms)) - np.eye(num_atoms)),
-        [num_atoms, num_atoms])
-    edges_train = edges_train[:, off_diag_idx]
-    edges_valid = edges_valid[:, off_diag_idx]
-    edges_test = edges_test[:, off_diag_idx]
-
-    train_data = TensorDataset(feat_train, edges_train)
-    valid_data = TensorDataset(feat_valid, edges_valid)
-    test_data = TensorDataset(feat_test, edges_test)
-
-    train_data_loader = DataLoader(train_data, batch_size=batch_size)
-    valid_data_loader = DataLoader(valid_data, batch_size=batch_size)
-    test_data_loader = DataLoader(test_data, batch_size=batch_size)
-
-    return train_data_loader, valid_data_loader, test_data_loader
-
-
-def load_motion_data(batch_size=1, suffix=''):
-    feat_train = np.load('data/motion_train' + suffix + '.npy')
-    feat_valid = np.load('data/motion_valid' + suffix + '.npy')
-    feat_test = np.load('data/motion_test' + suffix + '.npy')
-    adj = np.load('data/motion_adj' + suffix + '.npy')
-
-    # NOTE: Already normalized
-
-    # [num_samples, num_nodes, num_timesteps, num_dims]
-    num_nodes = feat_train.shape[1]
-
-    edges_train = np.repeat(np.expand_dims(adj.flatten(), 0),
-                            feat_train.shape[0], axis=0)
-    edges_valid = np.repeat(np.expand_dims(adj.flatten(), 0),
-                            feat_valid.shape[0], axis=0)
-    edges_test = np.repeat(np.expand_dims(adj.flatten(), 0),
-                           feat_test.shape[0], axis=0)
-
-    feat_train = torch.FloatTensor(feat_train)
-    edges_train = torch.LongTensor(np.array(edges_train, dtype=np.int64))
-    feat_valid = torch.FloatTensor(feat_valid)
-    edges_valid = torch.LongTensor(np.array(edges_valid, dtype=np.int64))
-    feat_test = torch.FloatTensor(feat_test)
-    edges_test = torch.LongTensor(np.array(edges_test, dtype=np.int64))
-
-    # Exclude self edges
-    off_diag_idx = np.ravel_multi_index(
-        np.where(np.ones((num_nodes, num_nodes)) - np.eye(num_nodes)),
-        [num_nodes, num_nodes])
-    edges_train = edges_train[:, off_diag_idx]
-    edges_valid = edges_valid[:, off_diag_idx]
-    edges_test = edges_test[:, off_diag_idx]
-
-    train_data = TensorDataset(feat_train, edges_train)
-    valid_data = TensorDataset(feat_valid, edges_valid)
-    test_data = TensorDataset(feat_test, edges_test)
-
-    train_data_loader = DataLoader(train_data, batch_size=batch_size)
-    valid_data_loader = DataLoader(valid_data, batch_size=batch_size)
-    test_data_loader = DataLoader(test_data, batch_size=batch_size)
-
-    return train_data_loader, valid_data_loader, test_data_loader
 
 
 def to_2d_idx(idx, num_cols):

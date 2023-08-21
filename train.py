@@ -184,18 +184,18 @@ rel_send = Variable(rel_send)
 def train(epoch, best_val_loss):
     t = time.time()
     nll_train = []
-    acc_train = []
     kl_train = []
     mse_train = []
 
     encoder.train()
     decoder.train()
     scheduler.step()
-    for batch_idx, (data, relations) in enumerate(train_loader):
+    for batch_idx, data in enumerate(train_loader):
 
         if args.cuda:
-            data, relations = data.cuda(), relations.cuda()
-        data, relations = Variable(data), Variable(relations)
+            data = data.cuda()
+
+        data = Variable(data)
 
         optimizer.zero_grad()
 
@@ -223,8 +223,8 @@ def train(epoch, best_val_loss):
 
         loss = loss_nll + loss_kl
 
-        acc = edge_accuracy(logits, relations)
-        acc_train.append(acc)
+        # acc = edge_accuracy(logits, relations)
+        # acc_train.append(acc)
 
         loss.backward()
         optimizer.step()
@@ -234,17 +234,15 @@ def train(epoch, best_val_loss):
         kl_train.append(loss_kl.data[0])
 
     nll_val = []
-    acc_val = []
     kl_val = []
     mse_val = []
 
     encoder.eval()
     decoder.eval()
-    for batch_idx, (data, relations) in enumerate(valid_loader):
+    for batch_idx, data in enumerate(valid_loader):
         if args.cuda:
-            data, relations = data.cuda(), relations.cuda()
-        data, relations = Variable(data, volatile=True), Variable(
-            relations, volatile=True)
+            data = data.cuda()
+        data = Variable(data, volatile=True)
 
         logits = encoder(data, rel_rec, rel_send)
         edges = gumbel_softmax(logits, tau=args.temp, hard=True)
@@ -257,8 +255,8 @@ def train(epoch, best_val_loss):
         loss_nll = nll_gaussian(output, target, args.var)
         loss_kl = kl_categorical_uniform(prob, args.num_atoms, args.edge_types)
 
-        acc = edge_accuracy(logits, relations)
-        acc_val.append(acc)
+        # acc = edge_accuracy(logits, relations)
+        # acc_val.append(acc)
 
         mse_val.append(F.mse_loss(output, target).data[0])
         nll_val.append(loss_nll.data[0])
@@ -268,11 +266,9 @@ def train(epoch, best_val_loss):
           'nll_train: {:.10f}'.format(np.mean(nll_train)),
           'kl_train: {:.10f}'.format(np.mean(kl_train)),
           'mse_train: {:.10f}'.format(np.mean(mse_train)),
-          'acc_train: {:.10f}'.format(np.mean(acc_train)),
           'nll_val: {:.10f}'.format(np.mean(nll_val)),
           'kl_val: {:.10f}'.format(np.mean(kl_val)),
           'mse_val: {:.10f}'.format(np.mean(mse_val)),
-          'acc_val: {:.10f}'.format(np.mean(acc_val)),
           'time: {:.4f}s'.format(time.time() - t))
     if args.save_folder and np.mean(nll_val) < best_val_loss:
         torch.save(encoder.state_dict(), encoder_file)
@@ -282,18 +278,15 @@ def train(epoch, best_val_loss):
               'nll_train: {:.10f}'.format(np.mean(nll_train)),
               'kl_train: {:.10f}'.format(np.mean(kl_train)),
               'mse_train: {:.10f}'.format(np.mean(mse_train)),
-              'acc_train: {:.10f}'.format(np.mean(acc_train)),
               'nll_val: {:.10f}'.format(np.mean(nll_val)),
               'kl_val: {:.10f}'.format(np.mean(kl_val)),
               'mse_val: {:.10f}'.format(np.mean(mse_val)),
-              'acc_val: {:.10f}'.format(np.mean(acc_val)),
               'time: {:.4f}s'.format(time.time() - t), file=log)
         log.flush()
     return np.mean(nll_val)
 
 
 def test():
-    acc_test = []
     nll_test = []
     kl_test = []
     mse_test = []
@@ -304,11 +297,10 @@ def test():
     decoder.eval()
     encoder.load_state_dict(torch.load(encoder_file))
     decoder.load_state_dict(torch.load(decoder_file))
-    for batch_idx, (data, relations) in enumerate(test_loader):
+    for batch_idx, data in enumerate(test_loader):
         if args.cuda:
-            data, relations = data.cuda(), relations.cuda()
-        data, relations = Variable(data, volatile=True), Variable(
-            relations, volatile=True)
+            data = data.cuda()
+        data = Variable(data, volatile=True)
 
         assert (data.size(2) - args.timesteps) >= args.timesteps
 
@@ -326,8 +318,8 @@ def test():
         loss_nll = nll_gaussian(output, target, args.var)
         loss_kl = kl_categorical_uniform(prob, args.num_atoms, args.edge_types)
 
-        acc = edge_accuracy(logits, relations)
-        acc_test.append(acc)
+        # acc = edge_accuracy(logits, relations)
+        # acc_test.append(acc)
 
         mse_test.append(F.mse_loss(output, target).data[0])
         nll_test.append(loss_nll.data[0])
@@ -368,7 +360,6 @@ def test():
     print('nll_test: {:.10f}'.format(np.mean(nll_test)),
           'kl_test: {:.10f}'.format(np.mean(kl_test)),
           'mse_test: {:.10f}'.format(np.mean(mse_test)),
-          'acc_test: {:.10f}'.format(np.mean(acc_test)))
     print('MSE: {}'.format(mse_str))
     if args.save_folder:
         print('--------------------------------', file=log)
@@ -377,7 +368,6 @@ def test():
         print('nll_test: {:.10f}'.format(np.mean(nll_test)),
               'kl_test: {:.10f}'.format(np.mean(kl_test)),
               'mse_test: {:.10f}'.format(np.mean(mse_test)),
-              'acc_test: {:.10f}'.format(np.mean(acc_test)),
               file=log)
         print('MSE: {}'.format(mse_str), file=log)
         log.flush()
